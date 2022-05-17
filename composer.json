@@ -1,0 +1,25 @@
+{
+    "description": "Cloudinary adapter for Flysystem 3+",
+    "license": "MIT",
+    "require": {
+        "php": "^8.0",
+        "cloudinary/cloudinary_php": "^2.0",
+        "league/flysystem": "^3.0"
+    },
+    "autoload": {
+        "Vasilvestre\\Flysystem\\Cloudinary": "src/"
+    },
+    "autoload-dev": {
+        "Vasilvestre\\Tests\\Flysystem\\Cloudinary": "tests/"
+    },
+    "config": {
+        "bin-dir": "bin"
+    },
+    "scripts": {
+        "test": "vendor/bin/phpunit"
+    },
+    "require-dev": {
+        "league/flysystem-adapter-test-utilities": "^3.0",
+        "phpunit/phpunit": "^9.0"
+    }
+}
