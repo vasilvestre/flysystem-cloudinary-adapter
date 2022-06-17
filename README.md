@@ -28,7 +28,3 @@ $adapter = new CloudinaryAdapter([
 // It is necessary if you want to overwrite files on `write` as Cloudinary does it by default.
 $filesystem = new Filesystem($adapter, ['disable_asserts' => true]);
 ```
-
-listing_a_toplevel_directory
-
-listing_contents_recursive
