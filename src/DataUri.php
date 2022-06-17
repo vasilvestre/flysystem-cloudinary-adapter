@@ -11,8 +11,6 @@ class DataUri
 {
     private string $content;
 
-    private \finfo $finfo;
-
     public function __construct(string $content)
     {
         $this->content = $content;
@@ -20,11 +18,7 @@ class DataUri
 
     private function getFileInfo(): \finfo
     {
-        if (!$this->finfo) {
-            $this->finfo = new \finfo(FILEINFO_MIME_TYPE);
-        }
-
-        return $this->finfo;
+        return new \finfo(FILEINFO_MIME_TYPE);
     }
 
     public function __toString(): string
