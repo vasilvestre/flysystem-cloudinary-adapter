@@ -7,6 +7,12 @@ This is a [Flysystem adapter](https://github.com/thephpleague/flysystem) for [Cl
 Highly inspired by [Enl/Flysystem-cloudinary](https://github.com/enl/flysystem-cloudinary).
 I wanted to support flysystem 3+ and I have no response from owner but I can backport the work done here.
 
+## Installation
+
+```
+composer require vasilvestre/flysystem-cloudinary-adapter
+```
+
 ## Bootstrap
 
 ``` php
