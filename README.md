@@ -4,8 +4,7 @@
 
 This is a [Flysystem adapter](https://github.com/thephpleague/flysystem) for [Cloudinary API](http://cloudinary.com/documentation/php_integration).
 
-Highly inspired by [Enl/Flysystem-cloudinary](https://github.com/enl/flysystem-cloudinary).
-I wanted to support flysystem 3+ and I have no response from owner but I can backport the work done here.
+As it seem close to https://github.com/carlosocarvalho/flysystem-cloudinary, this library do not fit my usage. The public_id shouldn't contains file extension for image and video and it does. It's also highly inspired by [Enl/Flysystem-cloudinary](https://github.com/enl/flysystem-cloudinary).
 
 ## Installation
 
