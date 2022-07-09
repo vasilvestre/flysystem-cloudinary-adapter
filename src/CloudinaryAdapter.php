@@ -56,7 +56,7 @@ class CloudinaryAdapter implements FilesystemAdapter
     public function write(string $path, string $contents, Config $config): void
     {
         $options = [
-            'public_id' => $path,
+            'public_id' => PathConverter::convertPathToPublicId($path),
             'overwrite' => true,
             'resource_type' => 'auto',
             'async' => $config->get('async'),
@@ -79,7 +79,7 @@ class CloudinaryAdapter implements FilesystemAdapter
         }
 
         $options = [
-            'public_id' => $path,
+            'public_id' => PathConverter::convertPathToPublicId($path),
             'overwrite' => true,
             'resource_type' => 'auto',
             'async' => $config->get('async'),
