@@ -24,7 +24,8 @@ include __DIR__ . '/vendor/autoload.php';
 $adapter = new CloudinaryAdapter([
     'cloud_name' => 'your-cloudname-here',
     'api_key' => 'api-key',
-    'api_secret' => 'You-know-what-to-do'
+    'api_secret' => 'You-know-what-to-do',
+    'uri_prefix' => 'prod/'
 ]);
 
 // I'm not sure about underlying instructions.

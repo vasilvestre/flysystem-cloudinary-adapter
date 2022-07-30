@@ -4,17 +4,22 @@ namespace Vasilvestre\Flysystem\Cloudinary\Tests;
 
 use League\Flysystem\AdapterTestUtilities\FilesystemAdapterTestCase;
 use League\Flysystem\Config;
+use League\Flysystem\DirectoryAttributes;
 use League\Flysystem\FilesystemAdapter;
 use League\Flysystem\StorageAttributes;
+use League\Flysystem\UnableToReadFile;
 
 class CloudinaryAdapterTest extends FilesystemAdapterTestCase
 {
+    private const URI_PREFIX = 'test/';
+
     protected static function createFilesystemAdapter(): FilesystemAdapter
     {
         return new OverridenCloudinaryAdapter([
             'cloud_name' => $_ENV["CLOUD_NAME"],
             'api_key' => $_ENV["API_KEY"],
-            'api_secret' => $_ENV["API_SECRET"]
+            'api_secret' => $_ENV["API_SECRET"],
+            'uri_prefix' => self::URI_PREFIX,
         ]);
     }
     /**
@@ -134,6 +139,70 @@ class CloudinaryAdapterTest extends FilesystemAdapterTestCase
                 'After moving, a file should be present at the new location.'
             );
             $this->assertEquals('contents to be copied', $adapter->read('destination.txt'));
+        });
+    }
+
+    /**
+     * @test
+     */
+    public function creating_a_directory(): void
+    {
+        $this->runScenario(function () {
+            $adapter = $this->adapter();
+
+            $adapter->createDirectory('creating_a_directory/path', new Config());
+
+            // Creating a directory should be idempotent.
+            $adapter->createDirectory('creating_a_directory/path', new Config());
+
+            $contents = iterator_to_array($adapter->listContents('creating_a_directory', false));
+            $this->assertCount(1, $contents, $this->formatIncorrectListingCount($contents));
+            /** @var DirectoryAttributes $directory */
+            $directory = $contents[0];
+            $this->assertInstanceOf(DirectoryAttributes::class, $directory);
+            $this->assertEquals(self::URI_PREFIX .'creating_a_directory/path', $directory->path());
+            $adapter->deleteDirectory('creating_a_directory/path');
+        });
+    }
+
+    /**
+     * @test
+     */
+    public function listing_contents_shallow(): void
+    {
+        $this->runScenario(function () {
+            $this->givenWeHaveAnExistingFile('some/0-path.txt', 'contents');
+            $this->givenWeHaveAnExistingFile('some/1-nested/path.txt', 'contents');
+
+            $listing = $this->adapter()->listContents('some', false);
+            /** @var StorageAttributes[] $items */
+            $items = iterator_to_array($listing);
+
+            $this->assertInstanceOf(\Generator::class, $listing);
+            $this->assertContainsOnlyInstancesOf(StorageAttributes::class, $items);
+
+            $this->assertCount(2, $items, $this->formatIncorrectListingCount($items));
+
+            // Order of entries is not guaranteed
+            [$fileIndex, $directoryIndex] = $items[0]->isFile() ? [0, 1] : [1, 0];
+
+            $this->assertEquals(self::URI_PREFIX . 'some/0-path.txt', $items[$fileIndex]->path());
+            $this->assertEquals(self::URI_PREFIX . 'some/1-nested', $items[$directoryIndex]->path());
+            $this->assertTrue($items[$fileIndex]->isFile());
+            $this->assertTrue($items[$directoryIndex]->isDir());
+        });
+    }
+
+    /**
+     * @test
+     * @depends deleting_a_file
+     */
+    public function reading_a_file_that_does_not_exist(): void
+    {
+        $this->expectException(UnableToReadFile::class);
+
+        $this->runScenario(function () {
+            $this->adapter()->read('path.txt');
         });
     }
 

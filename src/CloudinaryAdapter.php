@@ -32,6 +32,7 @@ class CloudinaryAdapter implements FilesystemAdapter
     private AdminApi $adminApi;
     private SearchApi $searchApi;
     private string $visibilityHandling;
+    private ?string $uriPrefix;
 
     /**
      * @param array $options
@@ -46,6 +47,7 @@ class CloudinaryAdapter implements FilesystemAdapter
         $this->adminApi = $cloudinaryClient->adminApi();
         $this->searchApi = $cloudinaryClient->searchApi();
         $this->visibilityHandling = $visibilityHandling;
+        $this->uriPrefix = $options['uri_prefix'] ?? null;
     }
 
     private static function sanitizePath(string $path): string
@@ -56,7 +58,7 @@ class CloudinaryAdapter implements FilesystemAdapter
     public function write(string $path, string $contents, Config $config): void
     {
         $options = [
-            'public_id' => PathConverter::convertPathToPublicId($path),
+            'public_id' => $this->uriPrefix . PathConverter::convertPathToPublicId($path),
             'overwrite' => true,
             'resource_type' => 'auto',
             'async' => $config->get('async'),
@@ -79,7 +81,7 @@ class CloudinaryAdapter implements FilesystemAdapter
         }
 
         $options = [
-            'public_id' => PathConverter::convertPathToPublicId($path),
+            'public_id' => $this->uriPrefix . PathConverter::convertPathToPublicId($path),
             'overwrite' => true,
             'resource_type' => 'auto',
             'async' => $config->get('async'),
@@ -94,6 +96,7 @@ class CloudinaryAdapter implements FilesystemAdapter
 
     public function delete(string $path): void
     {
+        $path = $this->uriPrefix . $path;
         $resources = $this->searchApi->expression(sprintf('public_id:%s', self::sanitizePath($path)))->execute()['resources'];
         if (false === empty($resources)) {
             try {
@@ -107,14 +110,10 @@ class CloudinaryAdapter implements FilesystemAdapter
 
     public function deleteDirectory(string $path): void
     {
-        $this->adminApi->deleteAssetsByPrefix($path);
-        $dirs = $this->adminApi->subFolders($path)['folders'];
-        /* @todo verify that this is still necessary at the end */
-        foreach ($dirs as $dir) {
-            $this->deleteDirectory($dir['path']);
-        }
-
         try {
+            if (str_starts_with($path, $this->uriPrefix) === false) {
+                $path = $this->uriPrefix . $path;
+            }
             $this->adminApi->deleteAssetsByPrefix($path, ['resource_type' => AssetType::RAW]);
             $this->adminApi->deleteAssetsByPrefix($path, ['resource_type' => AssetType::IMAGE]);
             $this->adminApi->deleteAssetsByPrefix($path, ['resource_type' => AssetType::VIDEO]);
@@ -127,6 +126,8 @@ class CloudinaryAdapter implements FilesystemAdapter
     public function move(string $source, string $destination, Config $config): void
     {
         try {
+            $source = $this->uriPrefix . $source;
+            $destination = $this->uriPrefix . $destination;
             $resources = $this->searchApi->expression(sprintf('public_id:%s', self::sanitizePath($source)))->execute()['resources'];
             if (empty($resources)) {
                 throw new NotFound();
@@ -141,7 +142,7 @@ class CloudinaryAdapter implements FilesystemAdapter
 
     public function copy(string $source, string $destination, Config $config): void
     {
-        throw UnableToCopyFile::fromLocationTo($source, $destination, new \LogicException('Cloudinary does not support visibility'));
+        throw UnableToCopyFile::fromLocationTo($source, $destination, new \LogicException('Cloudinary does not support copy'));
     }
 
     public function setVisibility(string $path, string $visibility): void
@@ -159,6 +160,7 @@ class CloudinaryAdapter implements FilesystemAdapter
     public function fileExists(string $path): bool
     {
         try {
+            $path = $this->uriPrefix . $path;
             return false === empty($this->searchApi->expression(sprintf('public_id:%s', self::sanitizePath($path)))->execute()['resources']);
         } catch (\Exception $exception) {
             throw new UnableToCheckFileExistence($exception->getMessage());
@@ -191,6 +193,7 @@ class CloudinaryAdapter implements FilesystemAdapter
     public function createDirectory(string $path, Config $config): void
     {
         try {
+            $path = $this->uriPrefix . $path;
             $this->adminApi->createFolder($path);
         } catch (ApiError $error) {
             throw new UnableToCreateDirectory($error->getMessage());
@@ -199,12 +202,13 @@ class CloudinaryAdapter implements FilesystemAdapter
 
     public function directoryExists(string $path): bool
     {
-        if (str_contains($path, '\\')) {
-            $dirs = $this->adminApi->subFolders($path)['folders'];
+        $path = $this->uriPrefix . $path;
+        if (str_contains($path, '/')) {
+            $dirs = $this->adminApi->subFolders(dirname($path))['folders'];
         } else {
             $dirs = $this->adminApi->rootFolders()['folders'];
         }
-        if (in_array($path, array_column($dirs, 'name'), true)) {
+        if (in_array($path, array_column($dirs, 'path'), true)) {
             return true;
         }
 
@@ -213,6 +217,7 @@ class CloudinaryAdapter implements FilesystemAdapter
 
     public function listContents(string $path, bool $deep): iterable
     {
+        $path = $this->uriPrefix . $path;
         foreach ($this->doListContents($path, $deep) as $file) {
             yield FileAttributes::fromArray($file);
         }
@@ -227,7 +232,6 @@ class CloudinaryAdapter implements FilesystemAdapter
     {
         $query = $this->searchApi->maxResults(500);
         if (!empty($directory)) {
-            $directory = urlencode($directory);
             if (false === $deep) {
                 $query->expression("folder:$directory");
             } else {
@@ -257,6 +261,7 @@ class CloudinaryAdapter implements FilesystemAdapter
      */
     public function getMetadata(string $path): FileAttributes
     {
+        $path = $this->uriPrefix . $path;
         $resources = $this->searchApi->expression(sprintf('public_id:%s', self::sanitizePath($path)))->execute()['resources'];
         if (empty($resources)) {
             throw new NotFound();
@@ -309,6 +314,7 @@ class CloudinaryAdapter implements FilesystemAdapter
 
     private function url(string $path)
     {
+        $path = $this->uriPrefix . $path;
         $resources = $this->searchApi->expression(sprintf('public_id:%s', self::sanitizePath($path)))->execute()['resources'];
         if (0 === \count($resources)) {
             throw new UnableToReadFile();
